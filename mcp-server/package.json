@@ -1,0 +1,16 @@
+{
+  "name": "bitrix24-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP сервер для работы с Битрикс 24",
+  "main": "mcp-server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node mcp-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.3.0",
+    "axios": "^1.6.0",
+    "zod": "^3.22.4"
+  }
+}

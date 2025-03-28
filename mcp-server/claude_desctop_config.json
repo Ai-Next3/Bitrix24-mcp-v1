@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "bitrix24": {
+      "command": "node",
+      "args": ["/path/to/mcp-server/mcp-server.js"],
+      "env": {},
+      "disabled": false,
+      "autoApprove": []
+    }
+  }
+}
