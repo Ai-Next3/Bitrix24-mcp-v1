@@ -116,6 +116,11 @@ class Bitrix24Model {
   async updateLead(id, leadData) {
     return this.makeRequest('crm.lead.update', { id, fields: leadData });
   }
+
+  // Отправка email письма
+  async sendEmail(emailData) {
+    return this.makeRequest('crm.activity.add', { fields: emailData });
+  }
   
   // Получение стадий лидов
   async getLeadStatuses() {
@@ -160,6 +165,11 @@ class Bitrix24Model {
   // Получение списка активностей
   async getActivities(filter = {}) {
     return this.makeRequest('crm.activity.list', { filter });
+  }
+
+  // Получение конкретной активности по ID
+  async getActivity(id) {
+    return this.makeRequest('crm.activity.get', { id });
   }
   
   // Получение информации о пользователе
@@ -351,6 +361,57 @@ class Bitrix24Controller {
       res.status(500).json({ error: error.message });
     }
   }
+
+  // Обработка отправки email письма
+  async handleSendEmailRequest(req, res) {
+    try {
+      const { recipientEmail, subject, message, leadId, dealId, contactId, responsibleId = "1" } = req.body;
+      
+      // Определяем тип и ID владельца активности
+      let ownerTypeId = "1"; // По умолчанию лид
+      let ownerId = "1";
+      
+      if (leadId) {
+        ownerTypeId = "1"; // Лид
+        ownerId = leadId;
+      } else if (dealId) {
+        ownerTypeId = "2"; // Сделка
+        ownerId = dealId;
+      } else if (contactId) {
+        ownerTypeId = "3"; // Контакт
+        ownerId = contactId;
+      }
+      
+      const emailData = {
+        OWNER_TYPE_ID: ownerTypeId,
+        OWNER_ID: ownerId,
+        TYPE_ID: 4, // Тип: Письмо
+        SUBJECT: subject,
+        DESCRIPTION: message,
+        DIRECTION: 2, // Исходящее
+        COMPLETED: "Y", // Выполнено
+        STATUS: 2, // Статус: выполнено
+        RESPONSIBLE_ID: responsibleId,
+        COMMUNICATIONS: [
+          {
+            VALUE: recipientEmail,
+            ENTITY_TYPE_ID: ownerTypeId,
+            ENTITY_ID: ownerId
+          }
+        ]
+      };
+      
+      const result = await this.model.sendEmail(emailData);
+      res.json(this.presenter.formatSendEmailResponse(result, {
+        to: recipientEmail,
+        subject: subject,
+        ownerType: ownerTypeId === "1" ? "Лид" : ownerTypeId === "2" ? "Сделка" : "Контакт",
+        ownerId: ownerId
+      }));
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
   
   // Обработка получения статусов лидов
   async handleLeadStatusesRequest(req, res) {
@@ -361,8 +422,8 @@ class Bitrix24Controller {
       res.status(500).json({ error: error.message });
     }
   }
-  
-  // Обработка получения активности
+
+  // Обработка получения активности по ID
   async handleGetActivityRequest(req, res) {
     try {
       const { id } = req.params;
@@ -797,6 +858,17 @@ class Bitrix24Presenter {
     };
   }
 
+  formatSendEmailResponse(data, details) {
+    return {
+      success: data && data.result > 0,
+      activityId: data ? data.result : null,
+      message: data && data.result > 0 
+        ? 'Email успешно отправлен!' 
+        : 'Ошибка при отправке email',
+      details: details
+    };
+  }
+
   formatCreateResponse(data) {
     return {
       success: data && data.result > 0,
@@ -884,6 +956,9 @@ app.get('/api/files/:id/download', (req, res) => bitrix24Controller.handleDownlo
 
 // Маршрут для получения email-писем лида
 app.get('/api/leads/:leadId/emails', (req, res) => bitrix24Controller.handleLeadEmailsRequest(req, res));
+
+// Маршрут для отправки email
+app.post('/api/send-email', (req, res) => bitrix24Controller.handleSendEmailRequest(req, res));
 
 // Запуск сервера
 const server = app.listen(PORT, () => {

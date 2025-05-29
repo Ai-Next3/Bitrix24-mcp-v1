@@ -811,6 +811,101 @@ async function main() {
     }
   );
 
+  // Инструмент для отправки email письма
+  server.tool(
+    "sendEmail",
+    {
+      recipientEmail: z.string().describe("Email получателя"),
+      subject: z.string().describe("Тема письма"),
+      message: z.string().describe("Текст письма"),
+      leadId: z.string().optional().describe("ID лида (если отправляется лиду)"),
+      dealId: z.string().optional().describe("ID сделки (если отправляется по сделке)"),
+      contactId: z.string().optional().describe("ID контакта (если отправляется контакту)"),
+      responsibleId: z.string().optional().describe("ID ответственного пользователя (по умолчанию 1)")
+    },
+    async ({ recipientEmail, subject, message, leadId, dealId, contactId, responsibleId = "1" }) => {
+      try {
+        // Определяем тип и ID владельца активности
+        let ownerTypeId = "1"; // По умолчанию лид
+        let ownerId = "1";
+        
+        if (leadId) {
+          ownerTypeId = "1"; // Лид
+          ownerId = leadId;
+        } else if (dealId) {
+          ownerTypeId = "2"; // Сделка
+          ownerId = dealId;
+        } else if (contactId) {
+          ownerTypeId = "3"; // Контакт
+          ownerId = contactId;
+        }
+        
+        const emailData = {
+          OWNER_TYPE_ID: ownerTypeId,
+          OWNER_ID: ownerId,
+          TYPE_ID: 4, // Тип: Письмо
+          SUBJECT: subject,
+          DESCRIPTION: message,
+          DIRECTION: 2, // Исходящее
+          COMPLETED: "Y", // Выполнено
+          STATUS: 2, // Статус: выполнено
+          RESPONSIBLE_ID: responsibleId,
+          COMMUNICATIONS: [
+            {
+              VALUE: recipientEmail,
+              ENTITY_TYPE_ID: ownerTypeId,
+              ENTITY_ID: ownerId
+            }
+          ]
+        };
+        
+        console.error(`Отправка email письма через активность с данными:`, emailData);
+        
+        // Отправляем запрос напрямую в Bitrix24 API
+        const response = await axios.post(
+          `https://b24-j8x78j.bitrix24.ru/rest/1/7npispe7t25ovopg/crm.activity.add`,
+          { fields: emailData }
+        );
+        
+        console.error("Получен ответ:", JSON.stringify(response.data));
+        
+        if (response.data.result) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  success: true,
+                  activityId: response.data.result,
+                  message: "Email успешно отправлен!",
+                  details: {
+                    to: recipientEmail,
+                    subject: subject,
+                    ownerType: ownerTypeId === "1" ? "Лид" : ownerTypeId === "2" ? "Сделка" : "Контакт",
+                    ownerId: ownerId
+                  }
+                }, null, 2)
+              }
+            ]
+          };
+        } else {
+          throw new Error("Не получен ID активности в ответе");
+        }
+      } catch (error) {
+        console.error("Ошибка при отправке email:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Ошибка при отправке email: ${error.message || 'Неизвестная ошибка'}`
+            }
+          ]
+        };
+      }
+    }
+  );
+
+
   // инструменты для работы с пользователями
 
   // Инструмент для получения списка пользователей
@@ -1153,7 +1248,7 @@ async function main() {
   console.error(" - Лиды: getLeads, getLead, createLead, updateLead, getLeadStatuses, getLeadEmails");
   console.error(" - Сделки: getDeals, getDeal, createDeal, updateDeal, getDealCategories, getDealStages");
   console.error(" - Контакты: getContacts, getContact");
-  console.error(" - Активности: getActivities, getActivity, createActivity, updateActivity");
+  console.error(" - Активности: getActivities, getActivity, createActivity, updateActivity, sendEmail");
   console.error(" - Пользователи: getUsers, getUser");
   console.error(" - Задачи: getTasks");
   console.error(" - Телефония: getCallStatistics");
