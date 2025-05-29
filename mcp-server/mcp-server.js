@@ -679,6 +679,39 @@ async function main() {
       }
     }
   );
+  // Инструмент для получения email-писем лида
+  server.tool(
+    "getLeadEmails",
+    {
+      leadId: z.string().describe("ID лида для получения его email-писем")
+    },
+    async ({ leadId }) => {
+      try {
+        console.error(`Отправка запроса GET ${API_BASE_URL}/leads/${leadId}/emails`);
+        const response = await axios.get(`${API_BASE_URL}/leads/${leadId}/emails`);
+        console.error("Получен ответ:", JSON.stringify(response.data).substring(0, 100) + "...");
+        
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(response.data, null, 2)
+            }
+          ]
+        };
+      } catch (error) {
+        console.error("Ошибка при получении email-писем лида:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Ошибка при получении email-писем лида: ${error.message || 'Неизвестная ошибка'}`
+            }
+          ]
+        };
+      }
+    }
+  );
 
   // Инструмент для создания новой активности
   server.tool(
@@ -1117,7 +1150,7 @@ async function main() {
   
   console.error("Bitrix24 MCP сервер успешно запущен и готов к работе");
   console.error("Доступны следующие группы инструментов:");
-  console.error(" - Лиды: getLeads, getLead, createLead, updateLead, getLeadStatuses");
+  console.error(" - Лиды: getLeads, getLead, createLead, updateLead, getLeadStatuses, getLeadEmails");
   console.error(" - Сделки: getDeals, getDeal, createDeal, updateDeal, getDealCategories, getDealStages");
   console.error(" - Контакты: getContacts, getContact");
   console.error(" - Активности: getActivities, getActivity, createActivity, updateActivity");

@@ -123,8 +123,28 @@ class Bitrix24Model {
   }
   
   // Получение активностей (дела)
-  async getActivity(id) {
-    return this.makeRequest('crm.activity.get', { id });
+  async getActivities(filter = {}) {
+    return this.makeRequest('crm.activity.list', { filter });
+  }
+  
+  // Получение email-писем лида
+  async getLeadEmails(leadId) {
+    const filter = {
+      OWNER_TYPE_ID: 1, // 1 = лид
+      OWNER_ID: leadId,
+      TYPE_ID: 4 // 4 = email
+    };
+    const select = [
+      'ID', 'SUBJECT', 'DESCRIPTION', 'CREATED', 'AUTHOR_ID', 
+      'RESPONSIBLE_ID', 'COMMUNICATIONS', 'FILES'
+    ];
+    const order = { CREATED: 'DESC' };
+    
+    return this.makeRequest('crm.activity.list', { 
+      filter, 
+      select, 
+      order 
+    });
   }
   
   // Обновление активности
@@ -365,12 +385,12 @@ class Bitrix24Controller {
     }
   }
   
-  // Обработка создания активности
-  async handleCreateActivityRequest(req, res) {
+  // Обработка получения email-писем лида
+  async handleLeadEmailsRequest(req, res) {
     try {
-      const activityData = req.body;
-      const result = await this.model.createActivity(activityData);
-      res.json(this.presenter.formatCreateResponse(result));
+      const { leadId } = req.params;
+      const emails = await this.model.getLeadEmails(leadId);
+      res.json(this.presenter.formatLeadEmailsResponse(emails));
     } catch (error) {
       res.status(500).json({ error: error.message });
     }
@@ -678,6 +698,25 @@ class Bitrix24Presenter {
       totalCount: data.total
     };
   }
+
+  formatLeadEmailsResponse(data) {
+    // Форматирование данных email-писем лида
+    if (!data || !data.result) return { emails: [] };
+    
+    return {
+      emails: data.result.map(email => ({
+        id: email.ID,
+        subject: email.SUBJECT,
+        description: email.DESCRIPTION,
+        createdDate: email.CREATED,
+        authorId: email.AUTHOR_ID,
+        responsibleId: email.RESPONSIBLE_ID,
+        communications: email.COMMUNICATIONS || [],
+        files: email.FILES || []
+      })),
+      totalCount: data.total || data.result.length
+    };
+  }
   
   formatUserResponse(data) {
     // Форматирование данных пользователя
@@ -842,6 +881,9 @@ app.post('/api/timeline-comment/:entityType/:entityId', (req, res) =>
 app.get('/api/call-statistics', (req, res) => bitrix24Controller.handleCallStatisticsRequest(req, res));
 app.get('/api/files/:id', (req, res) => bitrix24Controller.handleGetFileRequest(req, res));
 app.get('/api/files/:id/download', (req, res) => bitrix24Controller.handleDownloadFileRequest(req, res));
+
+// Маршрут для получения email-писем лида
+app.get('/api/leads/:leadId/emails', (req, res) => bitrix24Controller.handleLeadEmailsRequest(req, res));
 
 // Запуск сервера
 const server = app.listen(PORT, () => {
