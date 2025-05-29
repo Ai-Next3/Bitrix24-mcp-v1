@@ -108,11 +108,18 @@ async function main() {
       title: z.string().describe("Название лида"),
       name: z.string().optional().describe("Имя контакта"),
       lastName: z.string().optional().describe("Фамилия контакта"),
+      companyTitle: z.string().optional().describe("Название компании"),
       phone: z.string().optional().describe("Телефон контакта"),
       email: z.string().optional().describe("Email контакта"),
-      statusId: z.string().optional().describe("ID статуса лида")
+      statusId: z.string().optional().describe("ID статуса лида"),
+      comments: z.string().optional().describe("Комментарий к лиду"),
+      post: z.string().optional().describe("Должность контакта"),
+      sourceId: z.string().optional().describe("ID источника лида"),
+      assignedById: z.string().optional().describe("ID ответственного"),
+      opportunity: z.string().optional().describe("Сумма"),
+      currencyId: z.string().optional().describe("Валюта")
     },
-    async ({ title, name, lastName, phone, email, statusId }) => {
+    async ({ title, name, lastName, companyTitle, phone, email, statusId, comments, post, sourceId, assignedById, opportunity, currencyId }) => {
       try {
         const leadData = {
           TITLE: title
@@ -120,7 +127,14 @@ async function main() {
         
         if (name) leadData.NAME = name;
         if (lastName) leadData.LAST_NAME = lastName;
+        if (companyTitle) leadData.COMPANY_TITLE = companyTitle;
         if (statusId) leadData.STATUS_ID = statusId;
+        if (comments) leadData.COMMENTS = comments;
+        if (post) leadData.POST = post;
+        if (sourceId) leadData.SOURCE_ID = sourceId;
+        if (assignedById) leadData.ASSIGNED_BY_ID = assignedById;
+        if (opportunity) leadData.OPPORTUNITY = opportunity;
+        if (currencyId) leadData.CURRENCY_ID = currencyId;
         
         if (phone) {
           leadData.PHONE = [
@@ -168,18 +182,32 @@ async function main() {
       title: z.string().optional().describe("Название лида"),
       name: z.string().optional().describe("Имя контакта"),
       lastName: z.string().optional().describe("Фамилия контакта"),
+      companyTitle: z.string().optional().describe("Название компании"),
       phone: z.string().optional().describe("Телефон контакта"),
       email: z.string().optional().describe("Email контакта"),
-      statusId: z.string().optional().describe("ID статуса лида")
+      statusId: z.string().optional().describe("ID статуса лида"),
+      comments: z.string().optional().describe("Комментарий к лиду"),
+      post: z.string().optional().describe("Должность контакта"),
+      sourceId: z.string().optional().describe("ID источника лида"),
+      assignedById: z.string().optional().describe("ID ответственного"),
+      opportunity: z.string().optional().describe("Сумма"),
+      currencyId: z.string().optional().describe("Валюта")
     },
-    async ({ id, title, name, lastName, phone, email, statusId }) => {
+    async ({ id, title, name, lastName, companyTitle, phone, email, statusId, comments, post, sourceId, assignedById, opportunity, currencyId }) => {
       try {
         const leadData = {};
         
         if (title) leadData.TITLE = title;
         if (name) leadData.NAME = name;
         if (lastName) leadData.LAST_NAME = lastName;
+        if (companyTitle) leadData.COMPANY_TITLE = companyTitle;
         if (statusId) leadData.STATUS_ID = statusId;
+        if (comments) leadData.COMMENTS = comments;
+        if (post) leadData.POST = post;
+        if (sourceId) leadData.SOURCE_ID = sourceId;
+        if (assignedById) leadData.ASSIGNED_BY_ID = assignedById;
+        if (opportunity) leadData.OPPORTUNITY = opportunity;
+        if (currencyId) leadData.CURRENCY_ID = currencyId;
         
         if (phone) {
           leadData.PHONE = [
