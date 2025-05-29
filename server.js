@@ -121,6 +121,28 @@ class Bitrix24Model {
   async sendEmail(emailData) {
     return this.makeRequest('crm.activity.add', { fields: emailData });
   }
+
+  // Отправка сообщения в открытую линию
+  async sendOpenLineMessage(chatId, message) {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/im.message.add`,
+        {
+          DIALOG_ID: chatId,
+          MESSAGE: message
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error(`Ошибка при отправке сообщения в открытую линию:`, error.message);
+      throw error;
+    }
+  }
   
   // Получение стадий лидов
   async getLeadStatuses() {
@@ -412,7 +434,25 @@ class Bitrix24Controller {
       res.status(500).json({ error: error.message });
     }
   }
-  
+  // Обработка отправки сообщения в открытую линию
+  async handleSendOpenLineMessageRequest(req, res) {
+    try {
+      const { chatId, message, leadId } = req.body;
+      
+      if (!chatId || !message) {
+        return res.status(400).json({ error: "chatId и message обязательны" });
+      }
+      
+      const result = await this.model.sendOpenLineMessage(chatId, message);
+      res.json(this.presenter.formatSendOpenLineMessageResponse(result, {
+        chatId,
+        message,
+        leadId: leadId || null
+      }));
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  }
   // Обработка получения статусов лидов
   async handleLeadStatusesRequest(req, res) {
     try {
@@ -868,6 +908,17 @@ class Bitrix24Presenter {
       details: details
     };
   }
+  formatSendOpenLineMessageResponse(data, details) {
+    return {
+      success: data && data.result > 0,
+      messageId: data ? data.result : null,
+      message: data && data.result > 0 
+        ? 'Сообщение успешно отправлено в открытую линию!' 
+        : 'Ошибка при отправке сообщения в открытую линию',
+      details: details,
+      timestamp: new Date().toISOString()
+    };
+  }
 
   formatCreateResponse(data) {
     return {
@@ -959,6 +1010,8 @@ app.get('/api/leads/:leadId/emails', (req, res) => bitrix24Controller.handleLead
 
 // Маршрут для отправки email
 app.post('/api/send-email', (req, res) => bitrix24Controller.handleSendEmailRequest(req, res));
+// Маршрут для отправки сообщения в открытую линию
+app.post('/api/send-openline-message', (req, res) => bitrix24Controller.handleSendOpenLineMessageRequest(req, res));
 
 // Запуск сервера
 const server = app.listen(PORT, () => {

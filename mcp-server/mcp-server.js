@@ -904,7 +904,71 @@ async function main() {
       }
     }
   );
-
+  // Инструмент для отправки сообщения в открытую линию
+  server.tool(
+    "sendOpenLineMessage",
+    {
+      chatId: z.string().describe("ID чата открытой линии (например: chat9)"),
+      message: z.string().describe("Текст сообщения для отправки клиенту"),
+      leadId: z.string().optional().describe("ID лида (для контекста)")
+    },
+    async ({ chatId, message, leadId }) => {
+      try {
+        const messageData = {
+          DIALOG_ID: chatId,
+          MESSAGE: message
+        };
+        
+        console.error(`Отправка сообщения в открытую линию с данными:`, messageData);
+        
+        // Отправляем запрос напрямую в Bitrix24 API
+        const response = await axios.post(
+          `https://b24-j8x78j.bitrix24.ru/rest/1/7npispe7t25ovopg/im.message.add`,
+          messageData,
+          {
+            headers: {
+              'Content-Type': 'application/json'
+            }
+          }
+        );
+        
+        console.error("Получен ответ:", JSON.stringify(response.data));
+        
+        if (response.data.result) {
+          return {
+            content: [
+              {
+                type: "text",
+                text: JSON.stringify({
+                  success: true,
+                  messageId: response.data.result,
+                  message: "Сообщение успешно отправлено в открытую линию!",
+                  details: {
+                    chatId: chatId,
+                    text: message,
+                    leadId: leadId || "не указан",
+                    timestamp: new Date().toISOString()
+                  }
+                }, null, 2)
+              }
+            ]
+          };
+        } else {
+          throw new Error("Не получен ID сообщения в ответе");
+        }
+      } catch (error) {
+        console.error("Ошибка при отправке сообщения в открытую линию:", error);
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Ошибка при отправке сообщения в открытую линию: ${error.message || 'Неизвестная ошибка'}`
+            }
+          ]
+        };
+      }
+    }
+  );
 
   // инструменты для работы с пользователями
 
@@ -1248,7 +1312,7 @@ async function main() {
   console.error(" - Лиды: getLeads, getLead, createLead, updateLead, getLeadStatuses, getLeadEmails");
   console.error(" - Сделки: getDeals, getDeal, createDeal, updateDeal, getDealCategories, getDealStages");
   console.error(" - Контакты: getContacts, getContact");
-  console.error(" - Активности: getActivities, getActivity, createActivity, updateActivity, sendEmail");
+  console.error(" - Активности: getActivities, getActivity, createActivity, updateActivity, sendEmail, sendOpenLineMessage");
   console.error(" - Пользователи: getUsers, getUser");
   console.error(" - Задачи: getTasks");
   console.error(" - Телефония: getCallStatistics");
